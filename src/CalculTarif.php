@@ -1,9 +1,9 @@
 <?php
 /*******************************************************************************
  * @name: Calcul Tarif
- * @note: Mini Framework pour gérer les calculs de prix, avec promo et remise
+ * @note: Small Framework to manage price calculations, with promotion and discount
  * @author: Jgauthi <github.com/jgauthi>, crée le [30avril2015]
- * @version: 2.1
+ * @version: 2.2
  *******************************************************************************/
 
 namespace Jgauthi\Utils\Tarif;
@@ -14,21 +14,35 @@ class CalculTarif
 {
     public float $tarif;
     public int $qte = 1;
-    protected int $tva;
-    protected array $promo;
-    protected int $remise;
-    protected array $format = ['sep' => ',', 'mille' => ' ', 'start' => null, 'end' => null];
+    protected int $tax;
+    protected array $promotion;
+    protected int $discount;
+    protected array $format;
 
     public function __construct(int $tarif_unitaire, int $qte = 1)
     {
         $this->tarif = ((is_numeric($tarif_unitaire)) ? $tarif_unitaire : 0);
+        $this->setFormat();
 
-        if (is_numeric($qte) && $qte > 1) {
+        if ($qte > 1) {
             $this->qte = $qte;
         }
     }
 
-    public function tva(?int $pourcent = null): self
+    public function setFormat(string $sep = ',', string $mille = ' ', ?string $start = null, ?string $end = null): self
+    {
+        $this->format = [
+            'sep'   => $sep,
+            'mille' => $mille,
+            'start' => $start,
+            'end'   => $end,
+        ];
+
+        return $this;
+    }
+
+    // % tax (tva)
+    public function setTax(?int $pourcent = null): self
     {
         if (null === $pourcent) {
             return $this;
@@ -36,7 +50,7 @@ class CalculTarif
             throw new InvalidArgumentException("$pourcent is not a correct integer%");
         }
 
-        $this->tva = $pourcent;
+        $this->tax = $pourcent;
 
         return $this;
     }
@@ -48,48 +62,30 @@ class CalculTarif
             $this->format['end'];
     }
 
-    public function set_format(?string $sep = null, ?string $mille = null, ?string $start = null, ?string $end = null): self
+    //-- Reduction management ----------------------------------------------------
+
+    public function addPromotion(int $pourcent, int $promoStart = 1): self
     {
-        if (!is_null($sep)) {
-            $this->format['sep'] = $sep;
-        }
-        if (!is_null($mille)) {
-            $this->format['mille'] = $mille;
-        }
-        if (!is_null($start)) {
-            $this->format['start'] = $start;
-        }
-        if (!is_null($end)) {
-            $this->format['end'] = $end;
-        }
-
-        return $this;
-    }
-
-    //-- Gestion des réductions ------------------------------------------------
-
-    public function add_promo(int $pourcent, int $debut_promo = 1): self
-    {
-        if (!is_numeric($pourcent) || $pourcent < 0 || $pourcent > 100) {
+        if ($pourcent < 0 || $pourcent > 100) {
             throw new InvalidArgumentException("Invalid pourcent args: {$pourcent}");
-        } elseif ($debut_promo > $this->qte) {
-            throw new InvalidArgumentException("Invalid debut_promo args: {$debut_promo}");
+        } elseif ($promoStart > $this->qte) {
+            throw new InvalidArgumentException("Invalid debut_promo args: {$promoStart}");
         }
 
-        $this->promo[] = ['pourcent' => $pourcent, 'debut' => $debut_promo];
+        $this->promotion[] = ['pourcent' => $pourcent, 'debut' => $promoStart];
 
         return $this;
     }
 
-    public function remise(int $remise): self
+    public function setDiscount(int $discount): self
     {
-        if (null === $remise) {
+        if (null === $discount) {
             return $this;
-        } elseif (!is_numeric($remise) || $remise < 0 || $remise >= $this->tarif) {
-            throw new InvalidArgumentException("Invalid remise args: {$remise}");
+        } elseif ($discount < 0 || $discount >= $this->tarif) {
+            throw new InvalidArgumentException("Invalid remise args: {$discount}");
         }
 
-        $this->remise = $remise;
+        $this->discount = $discount;
 
         return $this;
     }
@@ -100,12 +96,12 @@ class CalculTarif
     {
         $total = 0;
 
-        if (!empty($this->promo) && $reduction) {
+        if (!empty($this->promotion) && $reduction) {
             for ($i = 1; $i <= $this->qte; ++$i) {
                 // Calcul d'un coefficient multiplicateur
                 //	http://www.capte-les-maths.com/pourcentage/les_pourcentages_p11_exos.php?exo=4
                 $coef_multi = 1;
-                foreach ($this->promo as $pr) {
+                foreach ($this->promotion as $pr) {
                     if ($i >= $pr['debut']) {
                         $coef_multi *= 1 - ($pr['pourcent'] / 100);
                     }
@@ -118,13 +114,13 @@ class CalculTarif
             $total = $this->tarif * $this->qte;
         }
 
-        if (!empty($this->remise) && $reduction) {
-            $total -= $this->remise;
+        if (!empty($this->discount) && $reduction) {
+            $total -= $this->discount;
         }
 
         // Tax (tva)
-        if (!empty($this->tva)) {
-            $total *= (1 + ($this->tva / 100));
+        if (!empty($this->tax)) {
+            $total *= (1 + ($this->tax / 100));
         }
 
         return $total;
@@ -133,14 +129,14 @@ class CalculTarif
     /**
      * Calculer la réduction appliquer à un montant.
      */
-    public function pourcent_applique(int $total): ?float
+    public function percentageApplied(int $total): ?float
     {
         // Calcul du MHR (Montant Hors Réduction)
         $montant_hr = $this->tarif * $this->qte;
 
         // Retirer la TVA du montant
-        if (!empty($this->tva)) {
-            $total *= 1 - ($this->tva / 100);
+        if (!empty($this->tax)) {
+            $total *= 1 - ($this->tax / 100);
         }
 
         // Calculer le % de réduction, formule: ( (MHR - Montant) * 100) / MHR)

@@ -1,5 +1,5 @@
 # Poc Calcul Tarif
-Mini Framework pour gérer les calculs de prix, avec promo et remise.
+Small Framework to manage price calculations, with promotion and discount.
 
 ## Prerequisite
 

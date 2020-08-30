@@ -4,7 +4,7 @@ use Jgauthi\Utils\Tarif\CalculTarif;
 // In this example, the vendor folder is located in root poc
 require_once __DIR__.'/../vendor/autoload.php';
 
-// Différents calculs
+// Different calculations
 $expression = [
     ['tarif' => 25.4, 	'qte' => 1, 'promo' => null],
     ['tarif' => 50.21,	'qte' => 4, 'promo' => 10],
@@ -26,18 +26,16 @@ $expression = [
     ['tarif' => 49.99, 'qte' => 4, 'promo' => 11, 'tva' => 19.6],
 ];
 
-// Mise en forme
 $result = [];
 foreach ($expression as $exp) {
-    // Gestion des promos
     $affichage = ['promo' => 'N/A', 'debut' => 'N/A'];
 
-    // Mise en place des règles pour le calcul
+    // Setting up rules for the calculation
     $calc = new CalculTarif($exp['tarif'], $exp['qte']);
-    $calc->set_format(',', ' ', null, null);
+    $calc->setFormat(',', ' ', null, null);
 
     if (!empty($exp['promo'])) {
-        // Plz Promotions
+        // Several Promotions
         if (is_array($exp['promo'])) {
             $affichage = ['promo' => [], 'debut' => []];
 
@@ -52,34 +50,33 @@ foreach ($expression as $exp) {
                 $affichage['promo'][] = $promo['%'];
                 $affichage['debut'][] = $promo['debut'];
 
-                $calc->add_promo($promo['%'], $promo['debut']);
+                $calc->addPromotion($promo['%'], $promo['debut']);
             }
 
             $affichage = [
                 'promo' => implode('+', $affichage['promo']),
                 'debut' => implode('+', $affichage['debut']),
             ];
-        }
 
-        // Une seule promo
-        elseif (!empty($exp['promo'])) {
+        // One only promo
+        } elseif (!empty($exp['promo'])) {
             $affichage['promo'] = $exp['promo'];
             if (!empty($exp['promo_debut'])) {
                 $affichage['debut'] = $exp['promo_debut'];
-                $calc->add_promo($exp['promo'], $exp['promo_debut']);
+                $calc->addPromotion($exp['promo'], $exp['promo_debut']);
             } else {
-                $calc->add_promo($exp['promo']);
+                $calc->addPromotion($exp['promo']);
             }
         }
     }
 
     if (!empty($exp['remise'])) {
-        $calc->remise($exp['remise']);
+        $calc->setDiscount($exp['remise']);
     }
 
-    // Gestion tax (TVA)
+    // Tax management
     if (!empty($exp['tva'])) {
-        $calc->tva($exp['tva']);
+        $calc->setTax($exp['tva']);
         $affichage['tva'] = $calc->format($exp['tva']);
 
         $exp['tarif_ttc'] = $exp['tarif'] * (1 + ($exp['tva'] / 100));
@@ -88,7 +85,7 @@ foreach ($expression as $exp) {
         $affichage['tva'] = 'N/A';
     }
 
-    // Calcul montant avec/sans réduction
+    // Amount calculation with / without reduction
     $exp['total'] = $calc->total();
     $exp['total_ht'] = $calc->total(false);
 
@@ -102,12 +99,12 @@ foreach ($expression as $exp) {
         'Résultat' => $calc->format($exp['total']),
         'Au lieu de' => $calc->format($exp['total_ht']),
         'Différence' => $calc->format(($exp['tarif_ttc'] * $exp['qte']) - $exp['total']),
-        '% applique' => $calc->format($calc->pourcent_applique($exp['total'])).'%',
+        '% applique' => $calc->format($calc->percentageApplied($exp['total'])).'%',
     ];
 }
 
 ?>
-<h1>Calcul tatif</h1>
+<h1>Calcul tarif</h1>
 <table class="table table-striped table-hover table-bordered" border="1">
     <thead class="thead-dark">
     <tr>
