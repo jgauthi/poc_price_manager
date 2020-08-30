@@ -3,7 +3,7 @@ Mini Framework pour gérer les calculs de prix, avec promo et remise.
 
 ## Prerequisite
 
-* PHP 5.4+ (v1.*) ou PHP 7.4 (v2.*)
+* PHP 5.4+ (v1.*) ou PHP 7 & 7.4 (v2.*)
 
 ## Install
 `composer install`
@@ -15,7 +15,7 @@ Or you can add this poc like a dependency, in this case edit your [composer.json
     { "type": "git", "url": "git@github.com:jgauthi/poc_calcul_tarif.git" }
   ],
   "require": {
-    "jgauthi/poc_calcul_tarif": "1.*"
+    "jgauthi/poc_calcul_tarif": "2.*"
   }
 }
 ```
