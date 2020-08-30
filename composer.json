@@ -1,0 +1,16 @@
+{
+  "name": "jgauthi/poc_calcul_tarif",
+  "description": "Mini Framework pour gérer les calculs de prix, avec promo et remise",
+  "type": "library",
+  "homepage": "https://github.com/jgauthi/poc_calcul_tarif",
+  "require": {
+    "php": ">=5.4"
+  },
+  "autoload": {
+    "psr-4": { "Jgauthi\\Utils\\Tarif\\": "src/" }
+  },
+  "license": "GPL-3.0",
+  "authors": [
+    { "name": "jgauthi", "homepage": "https://github.com/jgauthi" }
+  ]
+}
