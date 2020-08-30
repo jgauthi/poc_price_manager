@@ -4,7 +4,7 @@
   "type": "library",
   "homepage": "https://github.com/jgauthi/poc_calcul_tarif",
   "require": {
-    "php": ">=7.0"
+    "php": ">=7.4"
   },
   "autoload": {
     "psr-4": { "Jgauthi\\Utils\\Tarif\\": "src/" }

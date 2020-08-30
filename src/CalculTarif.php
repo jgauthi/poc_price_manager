@@ -3,7 +3,7 @@
  * @name: Calcul Tarif
  * @note: Mini Framework pour gérer les calculs de prix, avec promo et remise
  * @author: Jgauthi <github.com/jgauthi>, crée le [30avril2015]
- * @version: 2.0
+ * @version: 2.1
  *******************************************************************************/
 
 namespace Jgauthi\Utils\Tarif;
@@ -12,38 +12,26 @@ use InvalidArgumentException;
 
 class CalculTarif
 {
-    public $tarif;
-    public $qte;
-    protected $tva;
-    protected $promo;
-    protected $remise;
-    protected $format = ['sep' => ',', 'mille' => ' ', 'start' => null, 'end' => null];
+    public float $tarif;
+    public int $qte = 1;
+    protected int $tva;
+    protected array $promo;
+    protected int $remise;
+    protected array $format = ['sep' => ',', 'mille' => ' ', 'start' => null, 'end' => null];
 
-    /**
-     * calcul_tarif constructor.
-     *
-     * @param int $tarif_unitaire
-     * @param int $qte
-     */
     public function __construct(int $tarif_unitaire, int $qte = 1)
     {
         $this->tarif = ((is_numeric($tarif_unitaire)) ? $tarif_unitaire : 0);
 
         if (is_numeric($qte) && $qte > 1) {
             $this->qte = $qte;
-        } else {
-            $this->qte = 1;
         }
     }
 
-    /**
-     * @param int|null $pourcent
-     * @return self
-     */
     public function tva(?int $pourcent = null): self
     {
         if (null === $pourcent) {
-            return $this->tva;
+            return $this;
         } elseif (!is_numeric($pourcent) || $pourcent >= 100 || $pourcent < 0) {
             throw new InvalidArgumentException("$pourcent is not a correct integer%");
         }
@@ -53,42 +41,25 @@ class CalculTarif
         return $this;
     }
 
-    /**
-     * @param int $int
-     *
-     * @return string
-     */
     public function format(int $int): string
     {
         return $this->format['start'].
-            number_format(
-                $int,
-                2,
-                $this->format['sep'],
-                $this->format['mille']
-            ).
+            number_format($int, 2, $this->format['sep'], $this->format['mille']).
             $this->format['end'];
     }
 
-    /**
-     * @param int $sep
-     * @param int $mille
-     * @param int $start
-     * @param int $end
-     * @return self
-     */
-    public function set_format(int $sep = -1, int $mille = -1, int $start = -1, int $end = -1): self
+    public function set_format(?string $sep = null, ?string $mille = null, ?string $start = null, ?string $end = null): self
     {
-        if (-1 !== $sep) {
+        if (!is_null($sep)) {
             $this->format['sep'] = $sep;
         }
-        if (-1 !== $mille) {
+        if (!is_null($mille)) {
             $this->format['mille'] = $mille;
         }
-        if (-1 !== $start) {
+        if (!is_null($start)) {
             $this->format['start'] = $start;
         }
-        if (-1 !== $end) {
+        if (!is_null($end)) {
             $this->format['end'] = $end;
         }
 
@@ -97,12 +68,6 @@ class CalculTarif
 
     //-- Gestion des réductions ------------------------------------------------
 
-    /**
-     * @param int $pourcent
-     * @param int $debut_promo
-     *
-     * @return self
-     */
     public function add_promo(int $pourcent, int $debut_promo = 1): self
     {
         if (!is_numeric($pourcent) || $pourcent < 0 || $pourcent > 100) {
@@ -116,15 +81,10 @@ class CalculTarif
         return $this;
     }
 
-    /**
-     * @param int $remise
-     *
-     * @return self
-     */
-    public function remise(int $remise)
+    public function remise(int $remise): self
     {
         if (null === $remise) {
-            return $this->remise;
+            return $this;
         } elseif (!is_numeric($remise) || $remise < 0 || $remise >= $this->tarif) {
             throw new InvalidArgumentException("Invalid remise args: {$remise}");
         }
@@ -136,11 +96,6 @@ class CalculTarif
 
     //-- Fonctions de calcul ---------------------------------------------------
 
-    /**
-     * @param bool $reduction
-     *
-     * @return float
-     */
     public function total(bool $reduction = true): float
     {
         $total = 0;
@@ -177,10 +132,6 @@ class CalculTarif
 
     /**
      * Calculer la réduction appliquer à un montant.
-     *
-     * @param $total
-     *
-     * @return float|null
      */
     public function pourcent_applique(int $total): ?float
     {
