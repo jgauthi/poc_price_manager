@@ -1,151 +1,111 @@
 <?php
-use Jgauthi\Utils\Tarif\CalculTarif;
+use Jgauthi\Utils\Tarif\PriceManager;
 
 // In this example, the vendor folder is located in root poc
 require_once __DIR__.'/../vendor/autoload.php';
 
-// Different calculations
-$expression = [
-    ['tarif' => 25.4, 	'qte' => 1, 'promo' => null],
-    ['tarif' => 50.21,	'qte' => 4, 'promo' => 10],
-    ['tarif' => 28.69,	'qte' => 3, 'promo' => null, 'remise' => 15.52],
-    ['tarif' => 60, 	'qte' => 8, 'promo' => 15,	'promo_debut' => 4],
-    ['tarif' => 200,	'qte' => 6, 'remise' => 60, 'promo' => [
-        ['%' => 10],
-        ['%' => 15, 'debut' => 3],
-    ]],
-    ['tarif' => 142, 'qte' => 18, 'remise' => 123, 'promo' => [
-        ['%' => 10],
-        ['%' => 15,	'debut' => 3],
-        ['%' => 10,	'debut' => 6],
-        ['%' => 8, 	'debut' => 9],
-        ['%' => 9, 	'debut' => 12],
-        ['%' => 13,	'debut' => 15],
-        ['%' => 35,	'debut' => 18],
-    ]],
-    ['tarif' => 49.99, 'qte' => 4, 'promo' => 11, 'tva' => 19.6],
+$price = 10;
+$listPrices = [
+    ['description' => 'Standard price', 'taxRate' => 20],
+    ['description' => 'New Price', 'taxRate' => 20, 'newPrice' => 8],
+    ['description' => 'Price TTC with discount', 'taxRate' => 20, 'priceTtc' => 14.50, 'discounts' => [['title' => 'Réduction', 'value' => 2]]],
+    ['description' => 'Price calculated with no taxes with supplements', 'taxRate' => null, 'supplements' => [['title' => 'Port', 'value' => 6], ['title' => 'Papier cadeau', 'value' => 1.2]]],
+    ['description' => 'Price with discount+supplement', 'taxRate' => 12, 'discounts' => [['title' => 'Réduction', 'value' => 2]], 'supplements' => [['title' => 'Port', 'value' => 6]]],
+    ['description' => 'Price, discount OFF', 'taxRate' => 15, 'discounts' => [['title' => 'Réduction', 'value' => 4]], 'applyDiscount' => false],
+    ['description' => 'Price, supplements OFF', 'taxRate' => 15, 'supplements' => [['title' => 'Port', 'value' => 6]], 'applySupplement' => false],
 ];
 
-$result = [];
-foreach ($expression as $exp) {
-    $affichage = ['promo' => 'N/A', 'debut' => 'N/A'];
+$calculListPrices = [];
+foreach ($listPrices as $info) {
+    $comment = [];
+    if (!empty($info['priceTtc'])) {
+        $comment[] = 'Init class on price with taxes';
+        $priceManager = new PriceManager(
+            $info['priceTtc'],
+            $info['taxRate'],
+            $info['description'],
+            PriceManager::PRICE_WITH_TAXES,
+        );
+    } else {
+        $priceManager = new PriceManager($price, $info['taxRate'], $info['description']);
+    }
 
-    // Setting up rules for the calculation
-    $calc = new CalculTarif($exp['tarif'], $exp['qte']);
-    $calc->setFormat(',', ' ', null, null);
+    if ($priceManager->getTaxRate() === null) {
+        $comment[] = 'No Taxes for this price';
+    }
 
-    if (!empty($exp['promo'])) {
-        // Several Promotions
-        if (is_array($exp['promo'])) {
-            $affichage = ['promo' => [], 'debut' => []];
+    if (!empty($info['newPrice'])) {
+        $priceManager->setNewPrice($info['newPrice']);
+        $comment[] = 'New Price: '.$info['newPrice'];
+    }
 
-            foreach ($exp['promo'] as $promo) {
-                if (!isset($promo['%'])) {
-                    continue;
-                }
-                if (!isset($promo['debut'])) {
-                    $promo['debut'] = 1;
-                }
+    if (!empty($info['discounts'])) {
+        if (isset($info['applyDiscount'])) {
+            $priceManager->setApplyDiscount($info['applyDiscount']);
+        }
 
-                $affichage['promo'][] = $promo['%'];
-                $affichage['debut'][] = $promo['debut'];
-
-                $calc->addPromotion($promo['%'], $promo['debut']);
+        if ($priceManager->isApplyDiscount()) {
+            foreach ($info['discounts'] as ['title' => $title, 'value' => $value]) {
+                $priceManager->addDiscount($title, $value);
+                $comment[] = sprintf('Add discount: %.2f (%s)', $value, $title);
             }
-
-            $affichage = [
-                'promo' => implode('+', $affichage['promo']),
-                'debut' => implode('+', $affichage['debut']),
-            ];
-
-        // One only promo
-        } elseif (!empty($exp['promo'])) {
-            $affichage['promo'] = $exp['promo'];
-            if (!empty($exp['promo_debut'])) {
-                $affichage['debut'] = $exp['promo_debut'];
-                $calc->addPromotion($exp['promo'], $exp['promo_debut']);
-            } else {
-                $calc->addPromotion($exp['promo']);
-            }
+        } else {
+            $comment[] = "Can't apply discount, disabled";
         }
     }
 
-    if (!empty($exp['remise'])) {
-        $calc->setDiscount($exp['remise']);
+    if (!empty($info['supplements'])) {
+        if (isset($info['applySupplement'])) {
+            $priceManager->setApplySupplement($info['applySupplement']);
+        }
+
+        if ($priceManager->isApplySupplement()) {
+            foreach ($info['supplements'] as ['title' => $title, 'value' => $value]) {
+                $priceManager->addSupplement($title, $value);
+                $comment[] = sprintf('Add supplement: %.2f (%s)', $value, $title);
+            }
+        } else {
+            $comment[] = "Can't apply supplements, disabled";
+        }
     }
 
-    // Tax management
-    if (!empty($exp['tva'])) {
-        $calc->setTax($exp['tva']);
-        $affichage['tva'] = $calc->format($exp['tva']);
-
-        $exp['tarif_ttc'] = $exp['tarif'] * (1 + ($exp['tva'] / 100));
-    } else {
-        $exp['tarif_ttc'] = $exp['tarif']; // Pas de taxe
-        $affichage['tva'] = 'N/A';
-    }
-
-    // Amount calculation with / without reduction
-    $exp['total'] = $calc->total();
-    $exp['total_ht'] = $calc->total(false);
-
-    $result[] = [
-        'Tarif HT' => $calc->format($exp['tarif']),
-        'Quantité' => $exp['qte'],
-        'Promotion (%)' => $affichage['promo'],
-        'Promotion début' => $affichage['debut'],
-        'Remise' => ((!empty($exp['remise'])) ? $exp['remise'] : 'N/A'),
-        'TVA' => $affichage['tva'],
-        'Résultat' => $calc->format($exp['total']),
-        'Au lieu de' => $calc->format($exp['total_ht']),
-        'Différence' => $calc->format(($exp['tarif_ttc'] * $exp['qte']) - $exp['total']),
-        '% applique' => $calc->format($calc->percentageApplied($exp['total'])).'%',
+    $calculListPrices[$priceManager->getDescription()] = [
+        'Original Price' => !empty($info['priceTtc']) ? $info['priceTtc'] : $price,
+        'Tax Rate' => ($priceManager->getTaxRate() !== null) ? $priceManager->getTaxRate() : 'N/A',
+        'PriceNT Calculated' => $priceManager->getPriceCalculated(priceWithTaxes: false),
+        'PriceWT Calculated' => $priceManager->getPriceCalculated(),
+        'Comment' => implode(PHP_EOL, $comment),
     ];
 }
 
 ?>
-<h1>Calcul tarif</h1>
+<h3>Class to manage prices</h3>
 <table class="table table-striped table-hover table-bordered" border="1">
     <thead class="thead-dark">
     <tr>
-        <th scope="col">Tarif HT</th>
-        <th scope="col">Quantité</th>
-        <th scope="col">Promotion (%)</th>
-        <th scope="col">Promotion début</th>
-        <th scope="col">Remise</th>
-        <th scope="col">TVA</th>
-        <th scope="col">Résultat</th>
-        <th scope="col">Au lieu de</th>
-        <th scope="col">Différence</th>
-        <th scope="col">% applique</th>
+        <th scope="row">Colonnes</th>
+        <th scope="col">Original Price</th>
+        <th scope="col">Tax Rate</th>
+        <th scope="col">PriceNT Calculated</th>
+        <th scope="col">PriceWT Calculated</th>
+        <th scope="col">Comment</th>
     </tr>
     </thead>
     <tbody>
-    <?php foreach($result as $data): ?>
-    <tr class="tr_0">
-        <td class="td_Tarif HT"><?=$data['Tarif HT']?></td>
-        <td class="td_Quantité"><?=$data['Quantité']?></td>
-        <td class="td_Promotion (%)"><?=$data['Promotion (%)']?></td>
-        <td class="td_Promotion début"><?=$data['Promotion début']?></td>
-        <td class="td_Remise"><?=$data['Remise']?></td>
-        <td class="td_TVA"><?=$data['TVA']?></td>
-        <td class="td_Résultat"><?=$data['Résultat']?></td>
-        <td class="td_Au lieu de"><?=$data['Au lieu de']?></td>
-        <td class="td_Différence"><?=$data['Différence']?></td>
-        <td class="td_% applique"><?=$data['% applique']?></td>
+    <?php foreach ($calculListPrices as $title => $info): ?>
+    <tr>
+        <th align="left" scope="row"><?=$title?></th>
+        <td><?=$info['Original Price']?></td>
+        <td><?=$info['Tax Rate']?></td>
+        <td><?=$info['PriceNT Calculated']?></td>
+        <td><?=$info['PriceWT Calculated']?></td>
+        <td><?=$info['Comment']?></td>
     </tr>
     <?php endforeach ?>
     </tbody>
 </table>
 
-<br><br>
-<?php var_dump($result); ?>
-
-
-<style>
-    th, td                              { padding: 5px; }
-    th:nth-child(7), td:nth-child(7) 	{ background-color: #F25769; color: white; }
-    th:nth-child(8), td:nth-child(8) 	{ background-color: #669999; color: white; }
-    th:nth-child(9), td:nth-child(9) 	{ background-color: #000099; color: white; }
-    th:nth-child(10), td:nth-child(10) 	{ background-color: #663333; color: white; }
-</style>
+<dl class="row">
+    <dt class="col-sm-3">NT</dt><dd class="col-sm-9">No taxes (hors taxes)</dd>
+    <dt class="col-sm-3">WT</dt><dd class="col-sm-9">With taxes (TTC)</dd>
+</dl>

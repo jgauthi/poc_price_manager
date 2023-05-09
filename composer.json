@@ -1,10 +1,10 @@
 {
   "name": "jgauthi/poc_price_manager",
-  "description": "Mini Framework pour gérer les calculs de prix, avec promo et remise",
+  "description": "Framework to manage the calculation of a price according to different parameters",
   "type": "library",
   "homepage": "https://github.com/jgauthi/poc_price_manager",
   "require": {
-    "php": ">=7.4"
+    "php": ">=8.1"
   },
   "autoload": {
     "psr-4": { "Jgauthi\\Utils\\Tarif\\": "src/" }
