@@ -109,3 +109,5 @@ foreach ($listPrices as $info) {
     <dt class="col-sm-3">NT</dt><dd class="col-sm-9">No taxes (hors taxes)</dd>
     <dt class="col-sm-3">WT</dt><dd class="col-sm-9">With taxes (TTC)</dd>
 </dl>
+
+<p><a href="./specific_feature.php">Example of specific feature</a>: custom PriceManager for your project</p>
