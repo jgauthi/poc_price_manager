@@ -3,7 +3,7 @@
  * @name: Price Manager
  * @note: Framework to manage the calculation of a price according to different parameters
  * @author: Jgauthi, created at [28oct2022], url: <github.com/jgauthi/poc_price_manager>
- * @version: 3.0
+ * @version: 3.0.1
  * @Requirements:
     - PHP version >= 8.1 (http://php.net)
 
@@ -136,7 +136,7 @@ class PriceManager
         return $this;
     }
 
-    private function convertPriceWithTaxOrNot(float $price, bool $priceWithTaxes = true): float
+    protected function convertPriceWithTaxOrNot(float $price, bool $priceWithTaxes = true): float
     {
         if ($this->taxRate === null) {
             return $price;
@@ -167,7 +167,7 @@ class PriceManager
     }
 
     /**
-     * @throws \Exception
+     * @throws \ErrorException
      */
     public function getPriceCalculated(bool $priceWithTaxes = true): float
     {
@@ -189,7 +189,7 @@ class PriceManager
         }
 
         if (!$this->isAllowFreePrice() && empty($price)) {
-            throw new \Exception('Free price is not allowed.');
+            throw new \ErrorException('Free price is not allowed.');
         }
 
         $this->priceCalculated = $price;
